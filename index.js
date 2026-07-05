@@ -70,7 +70,7 @@ if (interaction.commandName === 'delete_after') {
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
             return interaction.reply({
-                content: "> ❌ You don't have permission.",
+                content: "> <:cross:1523326615113961483> You don't have permission.",
                 ephemeral: true
             });
         }
@@ -111,7 +111,7 @@ if (interaction.commandName === 'delete_after') {
                 }
             };
 
-            await interaction.editReply(`> ✅ ${deletedCount} messages deleted.`);
+            await interaction.editReply(`> <a:tick:1523325573680594966> ${deletedCount} messages deleted.`);
 
             const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
 
@@ -125,7 +125,7 @@ if (interaction.commandName === 'delete_after') {
             console.error(error);
 
             await interaction.editReply(
-                "> ❌ Can't delete messages. They might be older than 14 days or missing permissions."
+                "> <:cross:1523326615113961483> Can't delete messages. They might be older than 14 days or missing permissions."
             );
         }
 
@@ -171,107 +171,182 @@ client.once('ready', () => {
 });
 
 
+// ---------- Utilitaires ----------
+ 
 function hasAllowedRole(member) {
   if (!member || !config.ALLOWED_ROLE_ID) return false;
   return member.roles.cache.has(config.ALLOWED_ROLE_ID);
 }
-
+ 
+// Durée avant auto-suppression des réponses "ephemeral-like" (en ms)
+const EPHEMERAL_DELETE_MS = 6000;
+ 
+/**
+ * Envoie une réponse à une commande préfixe, puis la supprime automatiquement
+ * après un délai (avec le message de commande d'origine), pour simuler un
+ * comportement "ephemeral" (impossible nativement hors interactions Discord).
+ */
+async function replyEphemeralLike(message, content) {
+  const reply = await message.reply({ content }).catch(() => null);
+ 
+  setTimeout(() => {
+    if (reply) reply.delete().catch(() => {});
+    message.delete().catch(() => {});
+  }, EPHEMERAL_DELETE_MS);
+ 
+  return reply;
+}
+ 
+// ---------- Salon vocal "Aiguilleurs en ligne : X" ----------
+ 
+let lastVoiceRenameAt = 0;
+let pendingVoiceRenameTimer = null;
+// Discord limite les renommages à 2 par salon toutes les 10 minutes.
+// On impose un écart mini de 5 min entre deux renommages effectifs pour rester safe,
+// et on programme la valeur la plus récente si un renommage vient d'avoir lieu.
+const VOICE_RENAME_MIN_GAP_MS = 5 * 60 * 1000;
+ 
+async function updateVoiceChannelName(guild) {
+  if (!config.VOICE_CHANNEL_ID || !guild) return;
+ 
+  const applyRename = async () => {
+    const channel = await guild.channels.fetch(config.VOICE_CHANNEL_ID).catch(() => null);
+    if (!channel) return;
+ 
+    const count = dataStore.getTotalOnlineCount();
+    const newName = `Aiguilleurs en ligne : ${count}`;
+    if (channel.name === newName) return;
+ 
+    try {
+      await channel.setName(newName);
+      lastVoiceRenameAt = Date.now();
+    } catch (err) {
+      console.error('Erreur lors du renommage du salon vocal :', err);
+    }
+  };
+ 
+  const elapsed = Date.now() - lastVoiceRenameAt;
+ 
+  if (elapsed >= VOICE_RENAME_MIN_GAP_MS) {
+    if (pendingVoiceRenameTimer) {
+      clearTimeout(pendingVoiceRenameTimer);
+      pendingVoiceRenameTimer = null;
+    }
+    await applyRename();
+  } else if (!pendingVoiceRenameTimer) {
+    // Une mise à jour est déjà "récente" : on programme la prochaine
+    // pour respecter le rate limit, avec le compte le plus à jour au moment de l'exécution.
+    pendingVoiceRenameTimer = setTimeout(() => {
+      pendingVoiceRenameTimer = null;
+      applyRename();
+    }, VOICE_RENAME_MIN_GAP_MS - elapsed);
+  }
+}
+ 
 async function refreshPanelMessage(guild, messageId) {
   const panel = dataStore.getPanel(messageId);
   if (!panel) return null;
-
+ 
   const channel = await guild.channels.fetch(panel.channelId).catch(() => null);
   if (!channel) return null;
-
+ 
   const message = await channel.messages.fetch(messageId).catch(() => null);
   if (!message) return null;
-
+ 
   const embed = buildPanelEmbed(panel);
   const row = buildPanelButtons(messageId);
-
+ 
   await message.edit({ embeds: [embed], components: [row] });
   return message;
 }
-
+ 
 // ---------- Commandes texte ----------
-
+ 
 client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.guild) return;
   if (!message.content.startsWith(config.PREFIX)) return;
-
+ 
   const args = message.content.slice(config.PREFIX.length).trim().split(/\s+/);
   const command = args.shift().toLowerCase();
-
+ 
   // !embed -> poste le panel dans le salon courant
   if (command === 'embed') {
     if (!hasAllowedRole(message.member)) {
-      return message.reply({
-        content: "> ❌ Tu n'as pas la permission d'utiliser cette commande.",
-      }).catch(() => {});
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Tu n'as pas la permission d'utiliser cette commande.",
+      );
     }
-
+ 
     // On envoie un premier message "placeholder" pour obtenir son ID,
     // car les customId des boutons ont besoin de connaître l'ID du message.
     const placeholderEmbed = buildPanelEmbed({ instance1: [], instance2: [] });
     const sentMessage = await message.channel.send({ embeds: [placeholderEmbed] });
-
+ 
     dataStore.createPanel(sentMessage.id, message.channel.id);
-
+ 
     const row = buildPanelButtons(sentMessage.id);
     await sentMessage.edit({ embeds: [placeholderEmbed], components: [row] });
-
+ 
+    // Rien à cacher ici (l'embed est public), on nettoie juste la commande
+    message.delete().catch(() => {});
     return;
   }
-
+ 
   // !fsm <@utilisateur | id> -> retire quelqu'un du panel du salon courant
   if (command === 'fsm') {
     if (!hasAllowedRole(message.member)) {
-      return message.reply({
-        content: "> <:cross:1523326615113961483> Tu n'as pas la permission d'utiliser cette commande.",
-      }).catch(() => {});
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Tu n'as pas la permission d'utiliser cette commande.",
+      );
     }
-
+ 
     const targetUser = message.mentions.users.first();
     const targetId = targetUser ? targetUser.id : args[0];
-
+ 
     if (!targetId) {
-      return message.reply({
-        content: '> 🔑 Utilisation : `!fsm @utilisateur` ou `!fsm <id>`',
-      }).catch(() => {});
+      return replyEphemeralLike(
+        message,
+        '> 🔑 Utilisation : `!fsm @utilisateur` ou `!fsm <id>`',
+      );
     }
-
+ 
     const panelId = dataStore.getLatestPanelIdForChannel(message.channel.id);
     if (!panelId) {
-      return message.reply({
-        content: "> <:cross:1523326615113961483> Aucun panel actif n'a été trouvé dans ce salon.",
-      }).catch(() => {});
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Aucun panel actif n'a été trouvé dans ce salon.",
+      );
     }
-
+ 
     const removed = dataStore.removeUserFromPanel(panelId, targetId);
     if (!removed) {
-      return message.reply({
-        content: "> <:cross:1523326615113961483> Cet utilisateur n'était présent dans aucune instance du panel.",
-      }).catch(() => {});
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Cet utilisateur n'était présent dans aucune instance du panel.",
+      );
     }
-
+ 
     await refreshPanelMessage(message.guild, panelId);
-    return message.reply({ content: '> <a:tick:1523325573680594966> Utilisateur retiré du panel.' }).catch(() => {});
+    await updateVoiceChannelName(message.guild);
+    return replyEphemeralLike(message, '> <a:tick:1523325573680594966> Utilisateur retiré du panel.');
   }
 });
-
+ 
 // ---------- Interactions (boutons + modal) ----------
-
+ 
 client.on('interactionCreate', async (interaction) => {
   try {
     // --- Clic sur un bouton ---
     if (interaction.isButton()) {
       const [action, messageId] = interaction.customId.split(':');
-
+ 
       if (action === 'ps_button') {
         const modal = new ModalBuilder()
           .setCustomId(`ps_modal:${messageId}`)
           .setTitle('Prise de service');
-
+ 
         const gareInput = new TextInputBuilder()
           .setCustomId('gare_input')
           .setLabel('Gare')
@@ -279,7 +354,7 @@ client.on('interactionCreate', async (interaction) => {
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(100);
-
+ 
         const instanceInput = new TextInputBuilder()
           .setCustomId('instance_input')
           .setLabel('Instance (1 ou 2)')
@@ -287,27 +362,25 @@ client.on('interactionCreate', async (interaction) => {
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(1);
-
+ 
         modal.addComponents(
           new ActionRowBuilder().addComponents(gareInput),
           new ActionRowBuilder().addComponents(instanceInput),
         );
-
+ 
         await interaction.showModal(modal);
         return;
       }
-
+ 
       if (action === 'fs_button') {
         const panel = dataStore.getPanel(messageId);
-        const LOG_CHANNEL_ID= "1523249670812467352" // LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
         if (!panel) {
           return interaction.reply({
             content: '> <:cross:1523326615113961483> Ce panel est introuvable ou a expiré.',
             ephemeral: true,
           });
         }
-
-        const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
+ 
         const removed = dataStore.removeUserFromPanel(messageId, interaction.user.id);
         if (!removed) {
           return interaction.reply({
@@ -315,51 +388,33 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true,
           });
         }
-
-
-        const embed_fss_log = {
-            color: 0xE91E63,
-            title: "Fin de service",
-            description: `> 🎮 **${interaction.user.username}** a quitté son poste. `,
-            timestamp: new Date(),
-            footer: {
-                    text: `ID :${interaction.user.id}`
-                }
-            };
-
-            if (logChannel) {
-                await logChannel.send({
-                    embeds: [embed_fss_log]
-                });
-            }
-
-
+ 
         await refreshPanelMessage(interaction.guild, messageId);
+        await updateVoiceChannelName(interaction.guild);
         return interaction.reply({
-          content: '> <a:tick:1523325573680594966> Tu as été retiré du panel (fin de service).',
+          content: '<a:tick:1523325573680594966> Tu as été retiré du panel (fin de service).',
           ephemeral: true,
         });
       }
-
+ 
       return;
     }
-
+ 
     // --- Soumission du modal PS ---
     if (interaction.isModalSubmit()) {
       const [action, messageId] = interaction.customId.split(':');
       if (action !== 'ps_modal') return;
-
-      const LOG_CHANNEL_ID= "1523249670812467352"
+ 
       const gare = interaction.fields.getTextInputValue('gare_input').trim();
       const instanceRaw = interaction.fields.getTextInputValue('instance_input').trim();
-
+ 
       if (instanceRaw !== '1' && instanceRaw !== '2') {
         return interaction.reply({
           content: '> 🔢 L\'instance doit être `1` ou `2`. Réessaie via le bouton PS.',
           ephemeral: true,
         });
       }
-
+ 
       const panel = dataStore.getPanel(messageId);
       if (!panel) {
         return interaction.reply({
@@ -367,31 +422,14 @@ client.on('interactionCreate', async (interaction) => {
           ephemeral: true,
         });
       }
-      const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
-
-
+ 
       const instanceNumber = parseInt(instanceRaw, 10);
       const username = interaction.member?.displayName || interaction.user.username;
-
-      const embed_ps_log = {
-            color: 0xE91E63,
-            title: "Prise de service",
-            description: `> 🎮 **${interaction.user.username}** a pris \`${gare}\` \n > Instance : \`${instanceRaw}\` `,
-            timestamp: new Date(),
-            footer: {
-                    text: `ID :${interaction.user.id}`
-                }
-            };
-
-            if (logChannel) {
-                await logChannel.send({
-                    embeds: [embed_ps_log]
-                });
-            }
-
+ 
       dataStore.setUserInPanel(messageId, instanceNumber, interaction.user.id, username, gare);
       await refreshPanelMessage(interaction.guild, messageId);
-
+      await updateVoiceChannelName(interaction.guild);
+ 
       return interaction.reply({
         content: `> <a:tick:1523325573680594966> Prise de service enregistrée : **${gare}** (Instance ${instanceNumber}).`,
         ephemeral: true,
@@ -401,13 +439,20 @@ client.on('interactionCreate', async (interaction) => {
     console.error('Erreur interaction :', err);
     if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
       interaction.reply({
-        content: "> <:cross:1523326615113961483> Une erreur est survenue, réessaie plus tard. \n Merci de bien vouloir DM DeadsLights pour qu'il s'occupe du problème.",
+        content: "> <:cross:1523326615113961483> Une erreur est survenue, réessaie plus tard.",
         ephemeral: true,
       }).catch(() => {});
     }
   }
 });
-
+ 
+client.once('ready', async () => {
+  console.log(`Connecté en tant que ${client.user.tag}`);
+ 
+  for (const guild of client.guilds.cache.values()) {
+    await updateVoiceChannelName(guild).catch(() => {});
+  }
+});
 
 
 client.login(config.TOKEN);
