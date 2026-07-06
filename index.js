@@ -74,7 +74,7 @@ if (interaction.commandName === 'delete_after') {
                 ephemeral: true
             });
         }
-        const LOG_CHANNEL_ID= "1523249670812467352"
+        const LOG_CHANNEL_ID= "1523083325340909598"
         const messageId = interaction.options.getString('message_id');
         const channel = interaction.channel;
 
@@ -374,7 +374,7 @@ client.on('interactionCreate', async (interaction) => {
  
       if (action === 'fs_button') { // FIN DE SERVICE 
         const panel = dataStore.getPanel(messageId);
-        const LOG_CHANNEL_ID = "1523249670812467352";
+        const LOG_CHANNEL_ID = "1523749413820825651";
         const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
         if (!panel) {
           return interaction.reply({
@@ -422,7 +422,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isModalSubmit()) {
       const [action, messageId] = interaction.customId.split(':');
       if (action !== 'ps_modal') return;
- const LOG_CHANNEL_ID = "1523249670812467352";
+ const LOG_CHANNEL_ID = "1523749413820825651";
 
       const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
       const gare = interaction.fields.getTextInputValue('gare_input').trim();
