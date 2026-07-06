@@ -372,8 +372,10 @@ client.on('interactionCreate', async (interaction) => {
         return;
       }
  
-      if (action === 'fs_button') {
+      if (action === 'fs_button') { // FIN DE SERVICE 
         const panel = dataStore.getPanel(messageId);
+        const LOG_CHANNEL_ID = "1523249670812467352";
+        const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
         if (!panel) {
           return interaction.reply({
             content: '> <:cross:1523326615113961483> Ce panel est introuvable ou a expiré.',
@@ -388,6 +390,22 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true,
           });
         }
+
+        const embed_fs = {
+            color: 0xE91E63,
+            title: "Fin de Service",
+            description: `> 🎮 **${interaction.user.username}** a quitté son poste.`,
+            timestamp: new Date(),
+            footer: {
+                    text: `User ID: ${interaction.user.id}`
+                }
+            }
+
+        if (logChannel) {
+                await logChannel.send({
+                    embeds: [embed_fs]
+                });
+            }
  
         await refreshPanelMessage(interaction.guild, messageId);
         await updateVoiceChannelName(interaction.guild);
@@ -404,7 +422,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isModalSubmit()) {
       const [action, messageId] = interaction.customId.split(':');
       if (action !== 'ps_modal') return;
- 
+ const LOG_CHANNEL_ID = "1523249670812467352";
+
+      const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
       const gare = interaction.fields.getTextInputValue('gare_input').trim();
       const instanceRaw = interaction.fields.getTextInputValue('instance_input').trim();
  
@@ -423,6 +443,25 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
  
+
+      const embed_ps = {
+            color: 0xE91E63,
+            title: "Prise de Service",
+            description: `> 🎮 **${interaction.user.username}** a pris \`${gare}\` \n > Instance: \`${instanceRaw}\``,
+            timestamp: new Date(),
+            footer: {
+                    text: `User ID: ${interaction.user.id}`
+                }
+            };
+
+
+            if (logChannel) {
+                await logChannel.send({
+                    embeds: [embed_ps]
+                });
+            }
+    
+
       const instanceNumber = parseInt(instanceRaw, 10);
       const username = interaction.member?.displayName || interaction.user.username;
  
