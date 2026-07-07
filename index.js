@@ -12,6 +12,7 @@ const {
   REST,
   Routes,
   ChannelType,
+  StatusDisplayType,
 
 } = require('discord.js');
 
@@ -136,9 +137,10 @@ if (interaction.commandName === 'delete_after') {
 
 
 const statuses = [
-    'Bienvenue sur Stellwerksim!',
-    'Besoin d\'aide? allez dans la section Aide.',
-    'Vous aimez STS? Vous pouvez faire en don pour soutenir le projet!',
+    '👋 Bienvenue sur Stellwerksim!',
+    '❔ Besoin d\'aide? allez dans la section Tuto.',
+    '💖 Vous aimez STS? Vous pouvez faire en don pour soutenir le projet!',
+    '🎮 Avez-vous testé le nouveau système de PS & FS?',
 ];
 
 client.once('ready', () => {
@@ -151,11 +153,11 @@ client.once('ready', () => {
             activities: [
                 {
                     name: statuses[index],
-                    type: ActivityType.Streaming,
+                    type: ActivityType.Custom,
                     url: 'https://www.youtube.com/watch?v=Strcjv5G4OU&t=521s'
                 }
             ],
-            status: 'online'
+            status: 'dnd'
         });
 
         console.log(`Status changed : ${statuses[index]}`);
@@ -198,50 +200,7 @@ async function replyEphemeralLike(message, content) {
 }
  
 // ---------- Salon vocal "Aiguilleurs en ligne : X" ----------
- 
-let lastVoiceRenameAt = 0;
-let pendingVoiceRenameTimer = null;
-// Discord limite les renommages à 2 par salon toutes les 10 minutes.
-// On impose un écart mini de 5 min entre deux renommages effectifs pour rester safe,
-// et on programme la valeur la plus récente si un renommage vient d'avoir lieu.
-const VOICE_RENAME_MIN_GAP_MS = 5 * 60 * 1000;
- 
-async function updateVoiceChannelName(guild) {
-  if (!config.VOICE_CHANNEL_ID || !guild) return;
- 
-  const applyRename = async () => {
-    const channel = await guild.channels.fetch(config.VOICE_CHANNEL_ID).catch(() => null);
-    if (!channel) return;
- 
-    const count = dataStore.getTotalOnlineCount();
-    const newName = `Aiguilleurs en ligne : ${count}`;
-    if (channel.name === newName) return;
- 
-    try {
-      await channel.setName(newName);
-      lastVoiceRenameAt = Date.now();
-    } catch (err) {
-      console.error('Erreur lors du renommage du salon vocal :', err);
-    }
-  };
- 
-  const elapsed = Date.now() - lastVoiceRenameAt;
- 
-  if (elapsed >= VOICE_RENAME_MIN_GAP_MS) {
-    if (pendingVoiceRenameTimer) {
-      clearTimeout(pendingVoiceRenameTimer);
-      pendingVoiceRenameTimer = null;
-    }
-    await applyRename();
-  } else if (!pendingVoiceRenameTimer) {
-    // Une mise à jour est déjà "récente" : on programme la prochaine
-    // pour respecter le rate limit, avec le compte le plus à jour au moment de l'exécution.
-    pendingVoiceRenameTimer = setTimeout(() => {
-      pendingVoiceRenameTimer = null;
-      applyRename();
-    }, VOICE_RENAME_MIN_GAP_MS - elapsed);
-  }
-}
+
  
 async function refreshPanelMessage(guild, messageId) {
   const panel = dataStore.getPanel(messageId);
@@ -329,7 +288,6 @@ client.on('messageCreate', async (message) => {
     }
  
     await refreshPanelMessage(message.guild, panelId);
-    await updateVoiceChannelName(message.guild);
     return replyEphemeralLike(message, '> <a:tick:1523325573680594966> Utilisateur retiré du panel.');
   }
 });
@@ -408,7 +366,6 @@ client.on('interactionCreate', async (interaction) => {
             }
  
         await refreshPanelMessage(interaction.guild, messageId);
-        await updateVoiceChannelName(interaction.guild);
         return interaction.reply({
           content: '<a:tick:1523325573680594966> Tu as été retiré du panel (fin de service).',
           ephemeral: true,
@@ -467,7 +424,6 @@ client.on('interactionCreate', async (interaction) => {
  
       dataStore.setUserInPanel(messageId, instanceNumber, interaction.user.id, username, gare);
       await refreshPanelMessage(interaction.guild, messageId);
-      await updateVoiceChannelName(interaction.guild);
  
       return interaction.reply({
         content: `> <a:tick:1523325573680594966> Prise de service enregistrée : **${gare}** (Instance ${instanceNumber}).`,
@@ -485,13 +441,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
  
-client.once('ready', async () => {
-  console.log(`Connecté en tant que ${client.user.tag}`);
- 
-  for (const guild of client.guilds.cache.values()) {
-    await updateVoiceChannelName(guild).catch(() => {});
-  }
-});
+
 
 
 client.login(config.TOKEN);
