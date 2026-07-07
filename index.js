@@ -31,6 +31,7 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message],
 });
 
+module = require('./events')(client);
 // ---------- Utilitaires ----------
 
 const commands = [
