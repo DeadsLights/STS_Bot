@@ -32,6 +32,7 @@ const client = new Client({
 });
 
 module = require('./events')(client);
+
 // ---------- Utilitaires ----------
 
 const commands = [
@@ -333,7 +334,7 @@ client.on('interactionCreate', async (interaction) => {
  
       if (action === 'fs_button') { // FIN DE SERVICE 
         const panel = dataStore.getPanel(messageId);
-        const LOG_CHANNEL_ID = "1523749413820825651";
+        const LOG_CHANNEL_ID = "1523085823363383367";
         const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
         if (!panel) {
           return interaction.reply({
