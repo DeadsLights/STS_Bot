@@ -107,7 +107,7 @@ if (interaction.commandName === 'delete_after') {
             const embed_DL = {
             color: 0xE91E63,
             title: "/Delete_after commande exécutée",
-            description: `> 🛑 **${interaction.user.username}** a supprimé \`${deletedCount}\` messages dans <#${channel.id}>`,
+            description: `> 🛑 **${interaction.user}** a supprimé \`${deletedCount}\` messages dans <#${channel.id}>`,
             timestamp: new Date(),
             footer: {
                     text: `User ID: ${interaction.user.id}`
@@ -354,7 +354,7 @@ client.on('interactionCreate', async (interaction) => {
         const embed_fs = {
             color: 0xE91E63,
             title: "Fin de Service",
-            description: `> 🎮 **${interaction.user.username}** a quitté son poste.`,
+            description: `> 🎮 **${interaction.user}** a quitté son poste.`,
             timestamp: new Date(),
             footer: {
                     text: `User ID: ${interaction.user.id}`
@@ -406,7 +406,7 @@ client.on('interactionCreate', async (interaction) => {
       const embed_ps = {
             color: 0xE91E63,
             title: "Prise de Service",
-            description: `> 🎮 **${interaction.user.username}** a pris \`${gare}\` \n > Instance: \`${instanceRaw}\``,
+            description: `> 🎮 **${interaction.user}** a pris \`${gare}\` \n > Instance: \`${instanceRaw}\``,
             timestamp: new Date(),
             footer: {
                     text: `User ID: ${interaction.user.id}`
