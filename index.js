@@ -107,7 +107,7 @@ if (interaction.commandName === 'delete_after') {
             const embed_DL = {
             color: 0xE91E63,
             title: "/Delete_after commande exécutée",
-            description: `> 🛑 **${interaction.user.username}** a supprimé \`${deletedCount}\` dans <#${channel.id}>`,
+            description: `> 🛑 **${interaction.user.username}** a supprimé \`${deletedCount}\` messages dans <#${channel.id}>`,
             timestamp: new Date(),
             footer: {
                     text: `User ID: ${interaction.user.id}`
