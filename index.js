@@ -19,6 +19,7 @@ const {
 const config = require('./config');
 const dataStore = require('./dataStore');
 const { buildPanelEmbed, buildPanelButtons } = require('./panelView');
+const memberCounter = require("./memberCounter");
 
 const client = new Client({
   intents: [
@@ -144,10 +145,10 @@ const statuses = [
     '💖 Vous aimez STS? Vous pouvez faire en don pour soutenir le projet!',
     '🎮 Avez-vous testé le nouveau système de PS & FS?',
 ];
-
+// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 client.once('ready', () => {
     console.log(`🤖 Connecté en tant que ${client.user.tag}`);
-
+    memberCounter.start(client, "1523759963070009365");
     let index = 0;
 
     const updatePresence = () => {
