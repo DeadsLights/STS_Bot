@@ -18,7 +18,7 @@ function buildPanelEmbed(panel) {
     .setColor(0xE91E63)
     .setTitle('Stellwerksim - Panel de prise de service & fin de service')
     .setFooter({
-      text: 'Besoin d\'aide? demandez à un administateur de vous guider!',
+      text: 'N\'oubliez pas de FS lorsque vous quittez votre poste!',
       iconURL: config.FOOTER_ICON_URL || config.THUMBNAIL_URL,
     })
     .addFields(
