@@ -78,7 +78,7 @@ if (interaction.commandName === 'delete_after') {
                 ephemeral: true
             });
         }
-        const LOG_CHANNEL_ID= "1523083325340909598"
+        const LOG_CHANNEL_ID= "1523085823363383367"
         const messageId = interaction.options.getString('message_id');
         const channel = interaction.channel;
 
