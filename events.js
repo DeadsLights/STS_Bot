@@ -8,9 +8,6 @@ module.exports = (client) => {
       const content = String(message.content).toLowerCase().trim();
 
       // Réponses simples (exemples)
-                            if (content === 'cemo') {
-        return message.channel.send("> Il me sequestre tous les jours (au secours <:skullcry:1522949351612219402>)");
-      }
 
 
                             if (content === 'deadslights') {
