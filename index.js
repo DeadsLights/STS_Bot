@@ -148,7 +148,7 @@ const statuses = [
 // aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 client.once('ready', () => {
     console.log(`🤖 Connecté en tant que ${client.user.tag}`);
-    memberCounter.start(client, "1523759963070009365");
+    memberCounter.start(client, "1527454550129377350");
     let index = 0;
 
     const updatePresence = () => {
