@@ -88,7 +88,7 @@ function setUserInPanel(messageId, instanceNumber, userId, username, gare) {
   panel.instance1 = panel.instance1.filter((e) => e.userId !== userId);
   panel.instance2 = panel.instance2.filter((e) => e.userId !== userId);
 
-  const entry = { userId, username, gare };
+  const entry = { userId, username, gare, timestamp: Date.now() };
   if (instanceNumber === 1) {
     panel.instance1.push(entry);
   } else {
@@ -98,10 +98,36 @@ function setUserInPanel(messageId, instanceNumber, userId, username, gare) {
   return panel;
 }
 
+/**
+ * Retire toutes les entrées plus vieilles que maxAgeMs, dans tous les panels.
+ * Retourne la liste des messageId des panels modifiés (pour rafraîchir l'embed).
+ */
+function pruneExpiredEntries(maxAgeMs) {
+  const now = Date.now();
+  const changedMessageIds = [];
+
+  for (const [messageId, panel] of Object.entries(state.panels)) {
+    const before1 = panel.instance1.length;
+    const before2 = panel.instance2.length;
+
+    panel.instance1 = panel.instance1.filter((e) => now - (e.timestamp || 0) < maxAgeMs);
+    panel.instance2 = panel.instance2.filter((e) => now - (e.timestamp || 0) < maxAgeMs);
+
+    if (panel.instance1.length !== before1 || panel.instance2.length !== before2) {
+      changedMessageIds.push(messageId);
+    }
+  }
+
+  if (changedMessageIds.length > 0) saveData(state);
+  return changedMessageIds;
+}
+
+
 module.exports = {
   getPanel,
   createPanel,
   getLatestPanelIdForChannel,
   removeUserFromPanel,
   setUserInPanel,
+  pruneExpiredEntries, // <-- ajouté
 };
