@@ -149,8 +149,13 @@ const statuses = [
 client.once('ready', () => {
     console.log(`🤖 Connecté en tant que ${client.user.tag}`);
     memberCounter.start(client, "1527454550129377350");
-    let index = 0;
 
+    // Nettoyage auto des PS de plus de 3h
+    sweepExpiredPs();
+    setInterval(sweepExpiredPs, 5 * 60 * 1000); // vérifie toutes les 5 minutes
+
+
+    let index = 0;
     const updatePresence = () => {
         client.user.setPresence({
             activities: [
@@ -175,12 +180,38 @@ client.once('ready', () => {
     setInterval(updatePresence, 1 * 60 * 1000);
 });
 
+          const PS_MAX_DURATION_MS = 3 * 60 * 60 * 1000; // 3 heures
+
+          async function sweepExpiredPs() {
+            const changedMessageIds = dataStore.pruneExpiredEntries(PS_MAX_DURATION_MS);
+
+            for (const messageId of changedMessageIds) {
+              const panel = dataStore.getPanel(messageId);
+              if (!panel) continue;
+
+              const channel = client.channels.cache.get(panel.channelId)
+                || await client.channels.fetch(panel.channelId).catch(() => null);
+
+              if (!channel || !channel.guild) continue;
+
+              await refreshPanelMessage(channel.guild, messageId).catch(() => {});
+            }
+          }
+
 
 // ---------- Utilitaires ----------
  
 function hasAllowedRole(member) {
   if (!member || !config.ALLOWED_ROLE_ID) return false;
   return member.roles.cache.has(config.ALLOWED_ROLE_ID);
+}
+function isBlacklisted(member) {
+  if (!member || !config.BLACKLIST_ROLE_ID) return false;
+  return member.roles.cache.has(config.BLACKLIST_ROLE_ID);
+}
+function hasBlCommandRole(member) {
+  if (!member || !config.BL_COMMAND_ROLE_ID) return false;
+  return member.roles.cache.has(config.BL_COMMAND_ROLE_ID);
 }
  
 // Durée avant auto-suppression des réponses "ephemeral-like" (en ms)
@@ -293,6 +324,75 @@ client.on('messageCreate', async (message) => {
     await refreshPanelMessage(message.guild, panelId);
     return replyEphemeralLike(message, '> <a:tick:1523325573680594966> Utilisateur retiré du panel.');
   }
+    // !bl <userID> -> ajoute OU retire le rôle blacklist (toggle)
+  if (command === 'bl') {
+    if (!hasBlCommandRole(message.member)) {
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Tu n'as pas la permission d'utiliser cette commande.",
+      );
+    }
+
+    const targetUser = message.mentions.users.first();
+    const targetId = targetUser ? targetUser.id : args[0];
+
+    if (!targetId) {
+      return replyEphemeralLike(
+        message,
+        '> 🔑 Utilisation : `!bl @utilisateur` ou `!bl <id>`',
+      );
+    }
+
+    if (!config.BLACKLIST_ROLE_ID) {
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Le rôle blacklist n'est pas configuré (BLACKLIST_ROLE_ID).",
+      );
+    }
+
+    const targetMember = await message.guild.members.fetch(targetId).catch(() => null);
+    if (!targetMember) {
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Utilisateur introuvable sur ce serveur.",
+      );
+    }
+
+    const alreadyBlacklisted = targetMember.roles.cache.has(config.BLACKLIST_ROLE_ID);
+
+    try {
+      if (alreadyBlacklisted) {
+        await targetMember.roles.remove(config.BLACKLIST_ROLE_ID);
+      } else {
+        await targetMember.roles.add(config.BLACKLIST_ROLE_ID);
+      }
+    } catch (err) {
+      console.error('Erreur toggle rôle blacklist :', err);
+      return replyEphemeralLike(
+        message,
+        "> <:cross:1523326615113961483> Impossible de modifier le rôle (permissions du bot / hiérarchie des rôles).",
+      );
+    }
+
+    // Si on vient de blacklister, on retire l'utilisateur du panel en cours dans ce salon s'il y est
+    if (!alreadyBlacklisted) {
+      const panelId = dataStore.getLatestPanelIdForChannel(message.channel.id);
+      if (panelId) {
+        const removed = dataStore.removeUserFromPanel(panelId, targetId);
+        if (removed) {
+          await refreshPanelMessage(message.guild, panelId).catch(() => {});
+        }
+      }
+    }
+
+    return replyEphemeralLike(
+      message,
+      alreadyBlacklisted
+        ? `> <a:tick:1523325573680594966> <@${targetId}> n'est plus blacklisté.`
+        : `> <a:tick:1523325573680594966> <@${targetId}> a été blacklist.`,
+    );
+  }
+
 });
  
 // ---------- Interactions (boutons + modal) ----------
@@ -343,6 +443,12 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true,
           });
         }
+              if (isBlacklisted(interaction.member)) {
+              return interaction.reply({
+              content: "> <:cross:1523326615113961483> Tu n'es pas autorisé à effectuer une prise de service car tu as été **blacklist** de ce système. En revanche, tu peux faire appel en envoyant un message privé à <@843009938661048331>.",
+              ephemeral: true,
+                });
+              }
  
         const removed = dataStore.removeUserFromPanel(messageId, interaction.user.id);
         if (!removed) {
@@ -383,6 +489,13 @@ client.on('interactionCreate', async (interaction) => {
       const [action, messageId] = interaction.customId.split(':');
       if (action !== 'ps_modal') return;
  const LOG_CHANNEL_ID = "1523749413820825651";
+
+      if (isBlacklisted(interaction.member)) {
+          return interaction.reply({
+            content: "> <:cross:1523326615113961483> Tu n'es pas autorisé à effectuer une prise de service (rôle blacklist).",
+            ephemeral: true,
+          });
+        }
 
       const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
       const gare = interaction.fields.getTextInputValue('gare_input').trim();
