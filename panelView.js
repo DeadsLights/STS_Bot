@@ -17,6 +17,12 @@ function buildPanelEmbed(panel) {
   return new EmbedBuilder()
     .setColor(0xE91E63)
     .setTitle('Stellwerksim - Panel de prise de service & fin de service')
+    .setAuthor({
+      name: 'Stellwerksim',
+      iconURL: config.AUTHOR_ID,
+      url: 'https://stellwerksim.de/',
+    })
+    .setDescription('> ***Veuillez lire les règles avant d\'utiliser le panel!*** \n > __Tout non-respect sera sanctionné.__')
     .setFooter({
       text: 'N\'oubliez pas de FS lorsque vous quittez votre poste!',
       iconURL: config.FOOTER_ICON_URL || config.THUMBNAIL_URL,
@@ -43,9 +49,9 @@ function buildPanelButtons(messageId) {
       .setLabel('FS')
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
-      .setLabel("🆘 J'ai besoin d'aide !")
-      .setStyle(ButtonStyle.Link)
-      .setURL(helpUrl),
+      .setCustomId(`help_button:${messageId}`)
+      .setLabel("📜 Règles")
+      .setStyle(ButtonStyle.Primary),
   );
 
   return row;
