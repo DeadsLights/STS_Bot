@@ -165,7 +165,7 @@ client.once('ready', () => {
                     url: 'https://www.youtube.com/watch?v=Strcjv5G4OU&t=521s'
                 }
             ],
-            status: 'dnd'
+            status: 'online'
         });
 
         console.log(`Status changed : ${statuses[index]}`);
