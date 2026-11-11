@@ -2,23 +2,6 @@ const fs = require('fs');
 const path = require('path');
 
 const FILE_PATH = path.join(__dirname, 'panels.json');
-
-/**
- * Structure des données persistées :
- * {
- *   panels: {
- *     [messageId]: {
- *       channelId: string,
- *       instance1: [{ userId, username, gare }],
- *       instance2: [{ userId, username, gare }]
- *     }
- *   },
- *   channelToLatestPanel: {
- *     [channelId]: messageId
- *   }
- * }
- */
-
 function loadData() {
   if (!fs.existsSync(FILE_PATH)) {
     return { panels: {}, channelToLatestPanel: {} };
@@ -44,7 +27,6 @@ function saveData(data) {
   }
 }
 
-// État en mémoire, chargé au démarrage
 const state = loadData();
 
 function getPanel(messageId) {
@@ -62,9 +44,7 @@ function getLatestPanelIdForChannel(channelId) {
   return state.channelToLatestPanel[channelId] || null;
 }
 
-/**
- * Retire un utilisateur de toutes les instances d'un panel donné.
- */
+
 function removeUserFromPanel(messageId, userId) {
   const panel = state.panels[messageId];
   if (!panel) return false;
@@ -77,10 +57,7 @@ function removeUserFromPanel(messageId, userId) {
   return changed;
 }
 
-/**
- * Ajoute/replace un utilisateur dans l'instance choisie (1 ou 2) d'un panel.
- * Retire d'abord toute entrée existante de cet utilisateur (peu importe l'instance).
- */
+
 function setUserInPanel(messageId, instanceNumber, userId, username, gare) {
   const panel = state.panels[messageId];
   if (!panel) return null;
@@ -98,10 +75,7 @@ function setUserInPanel(messageId, instanceNumber, userId, username, gare) {
   return panel;
 }
 
-/**
- * Retire toutes les entrées plus vieilles que maxAgeMs, dans tous les panels.
- * Retourne la liste des messageId des panels modifiés (pour rafraîchir l'embed).
- */
+
 function pruneExpiredEntries(maxAgeMs) {
   const now = Date.now();
   const changedMessageIds = [];
@@ -129,5 +103,5 @@ module.exports = {
   getLatestPanelIdForChannel,
   removeUserFromPanel,
   setUserInPanel,
-  pruneExpiredEntries, // <-- ajouté
+  pruneExpiredEntries,
 };
