@@ -13,6 +13,7 @@ const {
   Routes,
   ChannelType,
   StatusDisplayType,
+  EmbedBuilder,
 
 } = require('discord.js');
 
@@ -34,7 +35,6 @@ const client = new Client({
 
 module = require('./events')(client);
 
-// ---------- Utilitaires ----------
 
 const commands = [
 new SlashCommandBuilder() // DELETE ADTER DELETE AFTER DELETE AFTER DELETE AFTER DELETE AFTER DELETE AFTER DELETE 
@@ -150,9 +150,8 @@ client.once('ready', () => {
     console.log(`🤖 Connecté en tant que ${client.user.tag}`);
     memberCounter.start(client, "1527454550129377350");
 
-    // Nettoyage auto des PS de plus de 3h
     sweepExpiredPs();
-    setInterval(sweepExpiredPs, 5 * 60 * 1000); // vérifie toutes les 5 minutes
+    setInterval(sweepExpiredPs, 5 * 60 * 1000); 
 
 
     let index = 0;
@@ -165,7 +164,7 @@ client.once('ready', () => {
                     url: 'https://www.youtube.com/watch?v=Strcjv5G4OU&t=521s'
                 }
             ],
-            status: 'online'
+            status: 'dnd'
         });
 
         console.log(`Status changed : ${statuses[index]}`);
@@ -173,14 +172,14 @@ client.once('ready', () => {
         index = (index + 1) % statuses.length;
     };
 
-    // Premier status instantané
+
     updatePresence();
 
-    // Change toutes les 5 minutes
+
     setInterval(updatePresence, 1 * 60 * 1000);
 });
 
-          const PS_MAX_DURATION_MS = 3 * 60 * 60 * 1000; // 3 heures
+          const PS_MAX_DURATION_MS = 3 * 60 * 60 * 1000; 
 
           async function sweepExpiredPs() {
             const changedMessageIds = dataStore.pruneExpiredEntries(PS_MAX_DURATION_MS);
@@ -199,7 +198,6 @@ client.once('ready', () => {
           }
 
 
-// ---------- Utilitaires ----------
  
 function hasAllowedRole(member) {
   if (!member || !config.ALLOWED_ROLE_ID) return false;
@@ -213,15 +211,10 @@ function hasBlCommandRole(member) {
   if (!member || !config.BL_COMMAND_ROLE_ID) return false;
   return member.roles.cache.has(config.BL_COMMAND_ROLE_ID);
 }
- 
-// Durée avant auto-suppression des réponses "ephemeral-like" (en ms)
+
 const EPHEMERAL_DELETE_MS = 6000;
  
-/**
- * Envoie une réponse à une commande préfixe, puis la supprime automatiquement
- * après un délai (avec le message de commande d'origine), pour simuler un
- * comportement "ephemeral" (impossible nativement hors interactions Discord).
- */
+
 async function replyEphemeralLike(message, content) {
   const reply = await message.reply({ content }).catch(() => null);
  
@@ -233,7 +226,6 @@ async function replyEphemeralLike(message, content) {
   return reply;
 }
  
-// ---------- Salon vocal "Aiguilleurs en ligne : X" ----------
 
  
 async function refreshPanelMessage(guild, messageId) {
@@ -252,9 +244,7 @@ async function refreshPanelMessage(guild, messageId) {
   await message.edit({ embeds: [embed], components: [row] });
   return message;
 }
- 
-// ---------- Commandes texte ----------
- 
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.guild) return;
   if (!message.content.startsWith(config.PREFIX)) return;
@@ -262,7 +252,7 @@ client.on('messageCreate', async (message) => {
   const args = message.content.slice(config.PREFIX.length).trim().split(/\s+/);
   const command = args.shift().toLowerCase();
  
-  // !embed -> poste le panel dans le salon courant
+
   if (command === 'embed') {
     if (!hasAllowedRole(message.member)) {
       return replyEphemeralLike(
@@ -271,8 +261,7 @@ client.on('messageCreate', async (message) => {
       );
     }
  
-    // On envoie un premier message "placeholder" pour obtenir son ID,
-    // car les customId des boutons ont besoin de connaître l'ID du message.
+
     const placeholderEmbed = buildPanelEmbed({ instance1: [], instance2: [] });
     const sentMessage = await message.channel.send({ embeds: [placeholderEmbed] });
  
@@ -281,12 +270,12 @@ client.on('messageCreate', async (message) => {
     const row = buildPanelButtons(sentMessage.id);
     await sentMessage.edit({ embeds: [placeholderEmbed], components: [row] });
  
-    // Rien à cacher ici (l'embed est public), on nettoie juste la commande
+
     message.delete().catch(() => {});
     return;
   }
  
-  // !fsm <@utilisateur | id> -> retire quelqu'un du panel du salon courant
+
   if (command === 'fsm') {
     if (!hasAllowedRole(message.member)) {
       return replyEphemeralLike(
@@ -324,7 +313,7 @@ client.on('messageCreate', async (message) => {
     await refreshPanelMessage(message.guild, panelId);
     return replyEphemeralLike(message, '> <a:tick:1523325573680594966> Utilisateur retiré du panel.');
   }
-    // !bl <userID> -> ajoute OU retire le rôle blacklist (toggle)
+
   if (command === 'bl') {
     if (!hasBlCommandRole(message.member)) {
       return replyEphemeralLike(
@@ -374,7 +363,6 @@ client.on('messageCreate', async (message) => {
       );
     }
 
-    // Si on vient de blacklister, on retire l'utilisateur du panel en cours dans ce salon s'il y est
     if (!alreadyBlacklisted) {
       const panelId = dataStore.getLatestPanelIdForChannel(message.channel.id);
       if (panelId) {
@@ -395,11 +383,9 @@ client.on('messageCreate', async (message) => {
 
 });
  
-// ---------- Interactions (boutons + modal) ----------
  
 client.on('interactionCreate', async (interaction) => {
   try {
-    // --- Clic sur un bouton ---
     if (interaction.isButton()) {
       const [action, messageId] = interaction.customId.split(':');
  
@@ -433,7 +419,23 @@ client.on('interactionCreate', async (interaction) => {
         return;
       }
  
-      if (action === 'fs_button') { // FIN DE SERVICE 
+      if (action === 'help_button') {
+        if (!config.HELP_EMBED) {
+          return interaction.reply({
+            content: "> Aucun message d'aide n'est configuré pour le moment.",
+            ephemeral: true,
+          });
+        }
+
+        const helpEmbed = new EmbedBuilder(config.HELP_EMBED);
+
+        return interaction.reply({
+          embeds: [helpEmbed],
+          ephemeral: true,
+        });
+      }
+
+      if (action === 'fs_button') {
         const panel = dataStore.getPanel(messageId);
         const LOG_CHANNEL_ID = "1523085823363383367";
         const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
@@ -484,7 +486,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
  
-    // --- Soumission du modal PS ---
     if (interaction.isModalSubmit()) {
       const [action, messageId] = interaction.customId.split(':');
       if (action !== 'ps_modal') return;
