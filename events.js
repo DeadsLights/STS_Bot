@@ -1,14 +1,10 @@
 module.exports = (client) => {
-  // Utiliser UN SEUL listener et router les réponses
   client.on('messageCreate', async (message) => {
     try {
       if (message.author?.bot) return;
 
-      // contenu normalisé pour les checks
+
       const content = String(message.content).toLowerCase().trim();
-
-      // Réponses simples (exemples)
-
 
                             if (content === 'deadslights') {
         return message.channel.send(">  Ce mec est un génie <:cerveauenorme:1522955860177981520>");
@@ -43,18 +39,11 @@ module.exports = (client) => {
                                                              if (content === 'capuccino assassino') {
         return message.channel.send("https://klipy.com/gifs/cringe-diesfromcringe-1");
       }
-      
-
-                                                                  if (content === 'unchained') {
-        return message.channel.send("> Unchained c'est nul germain 🥀");
-      }
-
 
                                                                         if (content === 'PSG') {
         return message.channel.send("> Yes, is a Giroud.");
       }
 
-      // autres handlers...
     } catch (err) {
       console.error('Erreur dans messageCreate handler:', err);
     }
