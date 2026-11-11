@@ -19,7 +19,6 @@ module.exports = {
 
                 const guild = channel.guild;
 
-                // Nombre total de membres
                 await guild.members.fetch();
                 const memberCount = guild.memberCount;
 
@@ -35,10 +34,8 @@ module.exports = {
             }
         }
 
-        // Mise à jour au démarrage
         updateCounter();
 
-        // Toutes les 10 minutes
         setInterval(updateCounter, 10 * 60 * 1000);
     }
 };
