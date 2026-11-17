@@ -54,12 +54,12 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
     try {
-        console.log('🚀 Enregistrement des commandes slash...');
+        console.log('booting up');
         await rest.put(
             Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
             { body: commands }
         );
-        console.log('✅ Commandes enregistrées !');
+        console.log('jesuisenlignewow');
     } catch (err) {
         console.error(err);
     }
@@ -146,7 +146,7 @@ const statuses = [
     '🎮 Avez-vous testé le nouveau système de PS & FS?',
 ];
 // aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-client.once('ready', () => {
+client.once('clientReady', () => {
     console.log(`🤖 Connecté en tant que ${client.user.tag}`);
     memberCounter.start(client, "1527454550129377350");
 
