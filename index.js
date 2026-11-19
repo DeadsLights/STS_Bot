@@ -12,8 +12,8 @@ const {
   REST,
   Routes,
   ChannelType,
-  StatusDisplayType,
   EmbedBuilder,
+  MessageFlags,
 
 } = require('discord.js');
 
@@ -39,11 +39,11 @@ module = require('./events')(client);
 const commands = [
 new SlashCommandBuilder() // DELETE ADTER DELETE AFTER DELETE AFTER DELETE AFTER DELETE AFTER DELETE AFTER DELETE 
         .setName('delete_after')
-        .setDescription('delete all messages after a specific message')
+        .setDescription('Supprimez des messages avant celui que vous souhaitez (disponible pendant 28 jours)')
         .addStringOption(option =>
             option
                 .setName('message_id')
-                .setDescription('ID of the reference message')
+                .setDescription('ID du message auquel vous souhaitez supprimer jusqu\'à ce même message.')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .toJSON(),
@@ -74,15 +74,15 @@ if (interaction.commandName === 'delete_after') {
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
             return interaction.reply({
-                content: "> <:cross:1523326615113961483> You don't have permission.",
-                ephemeral: true
+                content: "> <:cross:1523326615113961483> Tu n'as pas les permissions. ",
+                flags: MessageFlags.Ephemeral
             });
         }
         const LOG_CHANNEL_ID= "1523085823363383367"
         const messageId = interaction.options.getString('message_id');
         const channel = interaction.channel;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
             let deletedCount = 0;
@@ -129,7 +129,7 @@ if (interaction.commandName === 'delete_after') {
             console.error(error);
 
             await interaction.editReply(
-                "> <:cross:1523326615113961483> Can't delete messages. They might be older than 14 days or missing permissions."
+                "> <:cross:1523326615113961483> Je n'arrive pas à supprimer ces messages, ils doivent avoir plus de 28 jour. Sinon, envoi un message à `deadslights`"
             );
         }
 
@@ -147,7 +147,7 @@ const statuses = [
 ];
 // aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 client.once('clientReady', () => {
-    console.log(`🤖 Connecté en tant que ${client.user.tag}`);
+    console.log(`connectage en tant que monsieur ${client.user.tag}`);
     memberCounter.start(client, "1527454550129377350");
 
     sweepExpiredPs();
@@ -164,10 +164,10 @@ client.once('clientReady', () => {
                     url: 'https://www.youtube.com/watch?v=Strcjv5G4OU&t=521s'
                 }
             ],
-            status: 'dnd'
+            status: 'idle'
         });
 
-        console.log(`Status changed : ${statuses[index]}`);
+        console.log(`CHANNNGEAGEDELASTATUSS : ${statuses[index]}`);
 
         index = (index + 1) % statuses.length;
     };
@@ -423,7 +423,7 @@ client.on('interactionCreate', async (interaction) => {
         if (!config.HELP_EMBED) {
           return interaction.reply({
             content: "> Aucun message d'aide n'est configuré pour le moment.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -431,7 +431,7 @@ client.on('interactionCreate', async (interaction) => {
 
         return interaction.reply({
           embeds: [helpEmbed],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -442,13 +442,13 @@ client.on('interactionCreate', async (interaction) => {
         if (!panel) {
           return interaction.reply({
             content: '> <:cross:1523326615113961483> Ce panel est introuvable ou a expiré.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
               if (isBlacklisted(interaction.member)) {
               return interaction.reply({
               content: "> <:cross:1523326615113961483> Tu n'es pas autorisé à effectuer une prise de service car tu as été **blacklist** de ce système. En revanche, tu peux faire appel en envoyant un message privé à <@843009938661048331>.",
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
                 });
               }
  
@@ -456,7 +456,7 @@ client.on('interactionCreate', async (interaction) => {
         if (!removed) {
           return interaction.reply({
             content: "> <:cross:1523326615113961483> Tu n'es actuellement dans aucune instance de ce panel.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -479,7 +479,7 @@ client.on('interactionCreate', async (interaction) => {
         await refreshPanelMessage(interaction.guild, messageId);
         return interaction.reply({
           content: '<a:tick:1523325573680594966> Tu as été retiré du panel (fin de service).',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
  
@@ -494,7 +494,7 @@ client.on('interactionCreate', async (interaction) => {
       if (isBlacklisted(interaction.member)) {
           return interaction.reply({
             content: "> <:cross:1523326615113961483> Tu n'es pas autorisé à effectuer une prise de service (rôle blacklist).",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -505,7 +505,7 @@ client.on('interactionCreate', async (interaction) => {
       if (instanceRaw !== '1' && instanceRaw !== '2') {
         return interaction.reply({
           content: '> 🔢 L\'instance doit être `1` ou `2`. Réessaie via le bouton PS.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
  
@@ -513,7 +513,7 @@ client.on('interactionCreate', async (interaction) => {
       if (!panel) {
         return interaction.reply({
           content: '> <:cross:1523326615113961483> Ce panel est introuvable ou a expiré.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
  
@@ -544,7 +544,7 @@ client.on('interactionCreate', async (interaction) => {
  
       return interaction.reply({
         content: `> <a:tick:1523325573680594966> Prise de service enregistrée : **${gare}** (Instance ${instanceNumber}).`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } catch (err) {
@@ -552,7 +552,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
       interaction.reply({
         content: "> <:cross:1523326615113961483> Une erreur est survenue, réessaie plus tard.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       }).catch(() => {});
     }
   }
